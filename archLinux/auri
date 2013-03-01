@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# This script will download pkgfiles from the AUR and makepkg them for you
+
+AURI_DIR="/tmp/auri"
+
+function cleanup {
+  rm -r "$AURI_DIR"
+}
+
+if [ -n "$1" ]
+then
+  LONG="$1"
+  SHORT=${LONG:0:2}
+  #echo ${short}
+  
+  
+  mkdir -p "$AURI_DIR"
+  mkdir -p "$AURI_DIR/$LONG"
+  
+  cd "$AURI_DIR/$LONG"
+  
+  echo "Searching AUR for $LONG buildscript..."
+  URL="https://aur.archlinux.org/packages/$SHORT/$1/PKGBUILD"
+  #echo "Command = wget -q $URL"
+  
+  wget -q $URL
+  #echo "?:$?"
+  if [ $? == "0" ]; then
+  #if [ "$RET" == 0 ]; then
+    echo "Downloaded PKGBUILD..."
+  else
+    # present a list of options and quit
+    # -search the AUR for items:
+    SEARCH_URL="https://aur.archlinux.org/packages/?K=$LONG"
+    
+    wget -q -O search.html "$SEARCH_URL" 
+    
+    FILE="search.html"
+    
+    echo "Could not find PKGBUILD, perhaps you meant one of the following:"
+    
+    # Cycle trough the downloaded Search file, extracting the names of packages
+    while read CMD; do
+      STR=${CMD:0:23}
+      #echo "$STR"
+      if [ "$STR" == "<td><a href=\"/packages/" ]; then
+        #echo "MATCHES!!!!!!!!!!!!!!!!!!"
+        NAME_ETC=${CMD:23}
+        #echo "$NAME_ETC"
+        NAME_E=${NAME_ETC%"</a></td>"}
+        #echo "$NAME_E"
+        SLASH_POS=`expr index "$NAME_E" '/'`
+        #echo "$SLASH_POS"
+        NAME=${NAME_E:0:SLASH_POS-1}
+        echo " > $NAME"
+        #<td><a href="/packages/faustworks/
+      fi
+    done < "$FILE"
+    
+    cleanup
+    
+    exit 0
+  fi
+  
+  echo "Making package..."
+  makepkg --asroot PKGBUILD
+  echo "Done"
+  
+  PACKAGE_NAME=`ls | grep  pkg.tar.xz`
+  if [ "$PACKAGE_NAME" != "" ]; then
+    echo "Installing $PACKAGE_NAME"
+    pacman -U $PACKAGE_NAME
+  else
+    echo "Error making package, quitting!"
+  fi
+
+else
+  echo "Please tell me what package to install!"
+  echo "Example: auri luppp-git"
+  
+  cleanup
+  
+  exit 0
+fi
