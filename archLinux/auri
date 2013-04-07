@@ -5,7 +5,7 @@
 AURI_DIR="/tmp/auri"
 
 function cleanup {
-  rm -r "$AURI_DIR"
+  waste=$(rm -r "$AURI_DIR" 2>&1)
 }
 
 if [ -n "$1" ]
@@ -64,7 +64,7 @@ then
   fi
   
   echo "Making package..."
-  makepkg --asroot PKGBUILD
+  makepkg --skipinteg --asroot PKGBUILD
   echo "Done"
   
   PACKAGE_NAME=`ls | grep  pkg.tar.xz`
@@ -77,7 +77,8 @@ then
 
 else
   echo "Please tell me what package to install!"
-  echo "Example: auri luppp-git"
+  echo "Usage:   auri <packageName>"
+  echo "Example: auri faust"
   
   cleanup
   
